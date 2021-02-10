@@ -47,8 +47,15 @@ namespace Shepherd.Core
             await foreach (var key in _keyProvider.GatherKeys())
             {
                 index++;
-                _logger.LogInformation($"Providing key {index}. Vault has {status.Progress}/{status.SecretThreshold} keys to unseal");
+
+                if (!status.Sealed)
+                {
+                    continue;
+                }
+
+                _logger.LogInformation($"Providing key {index}.");
                 status = await client.V1.System.UnsealAsync(key);
+                _logger.LogInformation($"Vault now has {status.Progress}/{status.SecretThreshold} keys to unseal.");
             }
 
             _logger.LogInformation(status.Sealed

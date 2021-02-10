@@ -18,8 +18,10 @@ namespace Shepherd.Core.Factories
             return new(
                 _configuration.GetValue<string>("vault_token"),
                 _configuration.GetValue<Uri>("vault_ha_address"),
-                _configuration.GetValue<List<Uri>>("vault_member_addresses"),
-                _configuration.GetValue<List<string>>("wrapped_unsealing_keys")
+                _configuration.GetSection("vault_member_addresses").Get<List<Uri>>(),
+                _configuration.GetSection("wrapped_unsealing_keys").Get<List<string>>(),
+                _configuration.GetValue<string>("transit_key_name"),
+                _configuration.GetValue<string?>("expected_vault_common_name")
             );
         }
     }

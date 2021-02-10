@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -9,11 +10,6 @@ using VaultSharp.V1.SecretsEngines.Transit;
 
 namespace Shepherd.Core.KeyProviders
 {
-    public interface IKeyProvider
-    {
-        IAsyncEnumerable<string> GatherKeys(CancellationToken cancellationToken = default);
-    }
-
     public class TransitKeyProvider : IKeyProvider
     {
         private readonly ILogger<TransitKeyProvider> _logger;
@@ -44,7 +40,7 @@ namespace Shepherd.Core.KeyProviders
                     CipherText = wrappedKey
                 });
 
-                foreach (var warning in result.Warnings)
+                foreach (var warning in result?.Warnings ?? Enumerable.Empty<string>())
                 {
                     _logger.LogWarning($"Got warning '{warning}' from Vault during Transit decryption.");
                 }

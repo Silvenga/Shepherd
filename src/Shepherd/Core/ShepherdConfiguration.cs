@@ -8,6 +8,7 @@ namespace Shepherd.Core
         Uri VaultHaAddress,
         IReadOnlyList<Uri> VaultMembers,
         IReadOnlyList<string> WrappedUnsealingKeys,
-        string TransitKeyName
+        string TransitKeyName,
+        string? ExpectedVaultCommonName
     );
 }

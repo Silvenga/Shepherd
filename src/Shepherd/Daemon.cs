@@ -24,24 +24,35 @@ namespace Shepherd
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            IReadOnlyList<Vault> vaultMembers = _configuration.VaultMembers.Select(x => new Vault(x)).ToList();
-            _logger.LogInformation($"There are {vaultMembers.Count} members configured ({string.Join(", ", vaultMembers)}).");
-
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                foreach (var vault in vaultMembers)
+                IReadOnlyList<Vault> vaultMembers = _configuration.VaultMembers
+                                                                  .Select(x => new Vault(x))
+                                                                  .ToList();
+
+                _logger.LogInformation($"There are {vaultMembers.Count} members configured ({string.Join(", ", vaultMembers)}).");
+
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogTrace($"Processing vault '{vault}'.");
-
-                    var vaultStatus = await _vaultOperator.Status(vault);
-                    if (vaultStatus.IsSealed)
+                    foreach (var vault in vaultMembers)
                     {
-                        _logger.LogInformation($"Vault '{vaultStatus.Vault}' is sealed, attempting to unseal.");
-                        await _vaultOperator.ProvideKeys(vault);
-                    }
-                }
+                        _logger.LogTrace($"Processing vault '{vault}'.");
 
-                await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+                        var vaultStatus = await _vaultOperator.Status(vault);
+                        if (vaultStatus.IsSealed)
+                        {
+                            _logger.LogInformation($"Vault '{vaultStatus.Vault}' is sealed, attempting to unseal.");
+                            await _vaultOperator.ProvideKeys(vault);
+                        }
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
         }
     }
