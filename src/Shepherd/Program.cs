@@ -1,4 +1,6 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Shepherd
 {
@@ -6,8 +8,10 @@ namespace Shepherd
     {
         private static Task Main(string[] args)
         {
-            var daemon = new Daemon();
-            return daemon.Run();
+            return Host.CreateDefaultBuilder(args)
+                       .ConfigureServices(Startup.ConfigureServices)
+                       .ConfigureLogging(builder => builder.SetMinimumLevel(LogLevel.Trace))
+                       .RunConsoleAsync();
         }
     }
 }
