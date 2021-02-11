@@ -1,0 +1,22 @@
+name: "Build"
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runtime:
+          - linux-x64
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '5.0.x'
+    - run: dotnet build --configuration Release
+    - run: dotnet test --configuration Release
+    - run: dotnet publish --configuration Release -p:PublishReadyToRun=true -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained --runtime ${{ matrix.runtime }}
