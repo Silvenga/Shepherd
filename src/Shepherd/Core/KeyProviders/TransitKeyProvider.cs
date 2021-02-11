@@ -5,7 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using VaultSharp;
+using Shepherd.Core.Factories;
+using Shepherd.Core.Models;
 using VaultSharp.V1.SecretsEngines.Transit;
 
 namespace Shepherd.Core.KeyProviders
@@ -13,34 +14,50 @@ namespace Shepherd.Core.KeyProviders
     public class TransitKeyProvider : IKeyProvider
     {
         private readonly ILogger<TransitKeyProvider> _logger;
-        private readonly ShepherdConfiguration _configuration;
-        private readonly IVaultClient _vaultClient;
+        private readonly VaultClientFactory _vaultClientFactory;
 
-        public TransitKeyProvider(ILogger<TransitKeyProvider> logger, ShepherdConfiguration configuration, IVaultClient vaultClient)
+        private readonly IReadOnlyList<string> _wrappedKeys;
+        private readonly string _token;
+        private readonly string _mountPath;
+        private readonly string _keyName;
+        private readonly string? _hostname;
+        private readonly Uri _address;
+
+        public TransitKeyProvider(ILogger<TransitKeyProvider> logger, ShepherdConfiguration configuration, VaultClientFactory vaultClientFactory)
         {
             _logger = logger;
-            _configuration = configuration;
-            _vaultClient = vaultClient;
+            _vaultClientFactory = vaultClientFactory;
+
+            _address = configuration.Unsealing.Transit.Address ?? throw new ArgumentException("Key 'Unsealing:Transit:Address' is invalid.");
+            _keyName = configuration.Unsealing.Transit.KeyName ?? throw new ArgumentException("Key 'Unsealing:Transit:KeyName' is invalid.");
+            _mountPath = configuration.Unsealing.Transit.MountPath ?? throw new ArgumentException("Key 'Unsealing:Transit:MountPath' is invalid.");
+            _token = configuration.Unsealing.Transit.Token ?? throw new ArgumentException("Key 'Unsealing:Transit:Token' is invalid.");
+            _wrappedKeys = configuration.Unsealing.Transit.WrappedKeys;
+            _hostname = configuration.Unsealing.Transit.Hostname;
+
+            if (!_wrappedKeys.Any())
+            {
+                throw new ArgumentException("Key 'Unsealing:Transit:WrappedKeys' is invalid.");
+            }
         }
 
         public async IAsyncEnumerable<string> GatherKeys([EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Gathering keys using the Transit provider.");
+            var vaultClient = _vaultClientFactory.CreateClient(_address, _token, _hostname);
 
             var index = 0;
-            var wrappedKeys = _configuration.WrappedUnsealingKeys;
-            foreach (var wrappedKey in wrappedKeys)
+            foreach (var wrappedKey in _wrappedKeys)
             {
                 index++;
                 cancellationToken.ThrowIfCancellationRequested();
 
-                _logger.LogDebug($"Decrypting key {index}.");
-                var result = await _vaultClient.V1.Secrets.Transit.DecryptAsync(_configuration.TransitKeyName, new DecryptRequestOptions
+                _logger.LogDebug($"Decrypting key {index} using the Transit provider.");
+                var result = await vaultClient.V1.Secrets.Transit.DecryptAsync(_keyName, new DecryptRequestOptions
                 {
                     CipherText = wrappedKey
-                });
+                }, _mountPath);
 
-                foreach (var warning in result?.Warnings ?? Enumerable.Empty<string>())
+                foreach (var warning in result.Warnings ?? Enumerable.Empty<string>())
                 {
                     _logger.LogWarning($"Got warning '{warning}' from Vault during Transit decryption.");
                 }

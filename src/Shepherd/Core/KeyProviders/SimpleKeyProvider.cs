@@ -1,24 +1,31 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Shepherd.Core.Models;
 
 namespace Shepherd.Core.KeyProviders
 {
     public class SimpleKeyProvider : IKeyProvider
     {
-        private readonly ShepherdConfiguration _configuration;
+        private readonly IReadOnlyList<string> _keys;
 
         public SimpleKeyProvider(ShepherdConfiguration configuration)
         {
-            _configuration = configuration;
+            _keys = configuration.Unsealing.Simple.Keys;
+
+            if (!_keys.Any())
+            {
+                throw new ArgumentException("The configuration key 'Unsealing:Simple:Keys' is invalid.");
+            }
         }
 
 #pragma warning disable 1998
         public async IAsyncEnumerable<string> GatherKeys([EnumeratorCancellation] CancellationToken cancellationToken = default)
 #pragma warning restore 1998
         {
-            var wrappedKeys = _configuration.WrappedUnsealingKeys;
-            foreach (var key in wrappedKeys)
+            foreach (var key in _keys)
             {
                 yield return key;
             }

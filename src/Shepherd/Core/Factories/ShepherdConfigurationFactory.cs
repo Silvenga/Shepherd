@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using Shepherd.Core.Models;
 
 namespace Shepherd.Core.Factories
 {
@@ -15,14 +14,7 @@ namespace Shepherd.Core.Factories
 
         public ShepherdConfiguration Create()
         {
-            return new(
-                _configuration.GetValue<string>("vault_token"),
-                _configuration.GetValue<Uri>("vault_ha_address"),
-                _configuration.GetSection("vault_member_addresses").Get<List<Uri>>(),
-                _configuration.GetSection("wrapped_unsealing_keys").Get<List<string>>(),
-                _configuration.GetValue<string>("transit_key_name"),
-                _configuration.GetValue<string?>("expected_vault_common_name")
-            );
+            return _configuration.Get<ShepherdConfiguration>();
         }
     }
 }

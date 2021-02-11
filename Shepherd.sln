@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shepherd", "Shepherd.csproj", "{5F77503C-1CE2-424D-9F6C-E980B6F3EDC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shepherd", "src\Shepherd\Shepherd.csproj", "{4635AC85-7C89-4F4B-A10D-AEA3E6E9121C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5F77503C-1CE2-424D-9F6C-E980B6F3EDC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5F77503C-1CE2-424D-9F6C-E980B6F3EDC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5F77503C-1CE2-424D-9F6C-E980B6F3EDC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5F77503C-1CE2-424D-9F6C-E980B6F3EDC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4635AC85-7C89-4F4B-A10D-AEA3E6E9121C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4635AC85-7C89-4F4B-A10D-AEA3E6E9121C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4635AC85-7C89-4F4B-A10D-AEA3E6E9121C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4635AC85-7C89-4F4B-A10D-AEA3E6E9121C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {34DA0C21-D860-4863-AC4B-303A2824133A}
+		SolutionGuid = {82815707-0106-4B22-95E2-8F208C0EDD4E}
 	EndGlobalSection
 EndGlobal

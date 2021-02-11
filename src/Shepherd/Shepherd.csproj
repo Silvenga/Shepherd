@@ -10,10 +10,8 @@
     <PackageReference Include="Consul" Version="1.6.1.1" />
     <PackageReference Include="VaultSharp" Version="1.6.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Core\Models\" />
+    <PackageReference Include="Lamar" Version="5.0.2" />
+    <PackageReference Include="Lamar.Microsoft.DependencyInjection" Version="5.0.2" />
   </ItemGroup>
 
 </Project>
