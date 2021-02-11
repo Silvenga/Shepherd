@@ -9,14 +9,28 @@ jobs:
   build:
     strategy:
       matrix:
-        runtime:
-          - linux-x64
-    runs-on: ubuntu-latest
+        build:
+          - runtime: linux-x64
+            image: ubuntu-latest
+            published:
+              source: Shepherd
+              destination: shepherd-linux-x64
+          - runtime: win-x64
+            image: windows-latest
+            published:
+              source: Shepherd.exe
+              destination: shepherd-win-x64.exe
+    runs-on: ${{ matrix.build.image }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '5.0.x'
-    - run: dotnet build --configuration Release
-    - run: dotnet test --configuration Release
-    - run: dotnet publish --configuration Release -p:PublishReadyToRun=true -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained --runtime ${{ matrix.runtime }}
+      - uses: actions/checkout@v2
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.x'
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release
+      - run: dotnet publish -c Release -p:PublishReadyToRun=true -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained --runtime ${{ matrix.build.runtime }} -p:IncludeAllContentForSelfExtract=true -o ./publish
+      - run: mv ./publish/${{ matrix.build.published.source }} ./publish/${{ matrix.build.published.destination }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.build.runtime }}
+          path: ./publish/${{ matrix.build.published.destination }}
