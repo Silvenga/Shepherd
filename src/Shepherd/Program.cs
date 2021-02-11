@@ -10,7 +10,6 @@ namespace Shepherd
         private static Task Main(string[] args)
         {
             return Host.CreateDefaultBuilder(args)
-                       .ConfigureServices(Startup.ConfigureServices)
                        .ConfigureLogging(builder => builder.SetMinimumLevel(LogLevel.Trace))
                        .UseLamar((_, registry) => registry.Include(new ShepherdRegistry()))
                        .RunConsoleAsync();
