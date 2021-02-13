@@ -80,32 +80,98 @@ namespace Shepherd.Core.Factories
         {
             return (_, certificate, _, policy) =>
             {
-                var onlyHashNameValidationError = (policy & SslPolicyErrors.RemoteCertificateNameMismatch)
-                                                  == SslPolicyErrors.RemoteCertificateNameMismatch;
-
-                if (onlyHashNameValidationError && certificate != null)
+                var onlyHasNameValidationError = policy == SslPolicyErrors.RemoteCertificateNameMismatch;
+                if (onlyHasNameValidationError && certificate != null)
                 {
                     _logger.LogTrace($"Certificate is trusted, but the hostname does not match, validating for certificate hostname '{expectedHostname}'.");
 
-                    var sans = GetExtensions(certificate).Where(x => x.Oid?.Value == "2.5.29.17")
-                                                         .Select(x => x.Format(true))
-                                                         .SelectMany(x => x.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                                                         .Where(x => x.Contains("="))
-                                                         .Select(x => x.Split('=')[1])
-                                                         .ToList();
+                    var sans = X509SubjectAlternativeNameParser.ParseSubjectAlternativeNames(certificate).ToList();
                     var validCommonName = sans.Contains(expectedHostname, StringComparer.OrdinalIgnoreCase);
+                    if (!validCommonName)
+                    {
+                        _logger.LogTrace($"Expected hostname '{expectedHostname}' to be in the list [{string.Join(", ", sans)}].");
+                    }
+
                     return validCommonName;
                 }
 
-                return policy == SslPolicyErrors.None;
+                var unconditionallyValid = policy == SslPolicyErrors.None;
+                if (!unconditionallyValid)
+                {
+                    _logger.LogTrace($"Certificate '{certificate?.SubjectName.Name}' cannot be trusted (Reason: '{policy}').");
+                }
+
+                return unconditionallyValid;
             };
         }
 
-        private static IEnumerable<AsnEncodedData> GetExtensions(X509Certificate2 certificate)
+        // Adapted from https://github.com/dotnet/wcf/blob/a9984490334fdc7d7382cae3c7bc0c8783eacd16/src/System.Private.ServiceModel/src/System/IdentityModel/Claims/X509CertificateClaimSet.cs
+        // We don't have a strongly typed extension to parse Subject Alt Names, so we have to do a workaround 
+        // to figure out what the identifier, delimiter, and separator is by using a well-known extension
+        // If https://github.com/dotnet/corefx/issues/22068 ever goes anywhere, we can remove this
+        private static class X509SubjectAlternativeNameParser
         {
-            foreach (var extension in certificate.Extensions)
+            private const string SanOid = "2.5.29.17";
+
+            private static readonly string PlatformIdentifier;
+            private static readonly char PlatformDelimiter;
+            private static readonly string PlatformSeparator;
+
+            static X509SubjectAlternativeNameParser()
             {
-                yield return new AsnEncodedData(extension.Oid, extension.RawData);
+                // Extracted a well-known X509Extension
+                byte[] x509ExtensionBytes =
+                {
+                    48, 36, 130, 21, 110, 111, 116, 45, 114, 101, 97, 108, 45, 115, 117, 98, 106, 101, 99,
+                    116, 45, 110, 97, 109, 101, 130, 11, 101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109
+                };
+                const string subjectName1 = "not-real-subject-name";
+
+                X509Extension x509Extension = new(SanOid, x509ExtensionBytes, true);
+                string x509ExtensionFormattedString = x509Extension.Format(false);
+
+                // Each OS has a different dNSName identifier and delimiter
+                // On Windows, dNSName == "DNS Name" (localizable), on Linux, dNSName == "DNS"
+                // e.g.,
+                // Windows: x509ExtensionFormattedString is: "DNS Name=not-real-subject-name, DNS Name=example.com"
+                // Linux:   x509ExtensionFormattedString is: "DNS:not-real-subject-name, DNS:example.com"
+                // Parse: <identifier><delimter><value><separator(s)>
+
+                var delimiterIndex = x509ExtensionFormattedString.IndexOf(subjectName1, StringComparison.Ordinal) - 1;
+                PlatformDelimiter = x509ExtensionFormattedString[delimiterIndex];
+
+                // Make an assumption that all characters from the the start of string to the delimiter 
+                // are part of the identifier
+                PlatformIdentifier = x509ExtensionFormattedString.Substring(0, delimiterIndex);
+
+                var separatorFirstChar = delimiterIndex + subjectName1.Length + 1;
+                var separatorLength = 1;
+                for (var i = separatorFirstChar + 1; i < x509ExtensionFormattedString.Length; i++)
+                {
+                    // We advance until the first character of the identifier to determine what the
+                    // separator is. This assumes that the identifier assumption above is correct
+                    if (x509ExtensionFormattedString[i] == PlatformIdentifier[0])
+                    {
+                        break;
+                    }
+
+                    separatorLength++;
+                }
+
+                PlatformSeparator = x509ExtensionFormattedString.Substring(separatorFirstChar, separatorLength);
+            }
+
+            public static IEnumerable<string> ParseSubjectAlternativeNames(X509Certificate2 cert)
+            {
+                return cert.Extensions
+                           .Cast<X509Extension>()
+                           .Where(ext => ext.Oid?.Value?.Equals(SanOid) == true) // Only use SAN extensions
+                           .Select(ext => new AsnEncodedData(ext.Oid, ext.RawData).Format(false)) // Decode from ASN
+                           // This is dumb but AsnEncodedData.Format changes based on the platform, so our static initialization code handles making sure we parse it correctly
+                           .SelectMany(text => text.Split(PlatformSeparator, StringSplitOptions.RemoveEmptyEntries))
+                           .Select(text => text.Split(PlatformDelimiter))
+                           .Where(x => x[0] == PlatformIdentifier)
+                           .Select(x => x[1]);
             }
         }
     }
