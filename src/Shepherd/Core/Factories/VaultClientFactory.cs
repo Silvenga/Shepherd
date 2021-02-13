@@ -90,6 +90,7 @@ namespace Shepherd.Core.Factories
                     var sans = GetExtensions(certificate).Where(x => x.Oid?.Value == "2.5.29.17")
                                                          .Select(x => x.Format(true))
                                                          .SelectMany(x => x.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                                                         .Where(x => x.Contains("="))
                                                          .Select(x => x.Split('=')[1])
                                                          .ToList();
                     var validCommonName = sans.Contains(expectedHostname, StringComparer.OrdinalIgnoreCase);
