@@ -1,7 +1,7 @@
 # Install on Linux
 
 ```bash
-wget https://github.com/Silvenga/Shepherd/releases/download/v0.1.1/shepherd-linux-x64
+wget https://github.com/Silvenga/Shepherd/releases/download/v0.2.0/shepherd-linux-x64
 
 # Install shepherd under the name "vault-shepherd"
 sudo install --owner=root --group=root shepherd-linux-x64 /usr/local/bin/vault-shepherd
@@ -71,7 +71,7 @@ ProtectHome=read-only
 PrivateTmp=yes
 PrivateDevices=yes
 NoNewPrivileges=yes
-ExecStart=/usr/local/bin/shepherd
+ExecStart=/usr/local/bin/vault-shepherd
 KillMode=process
 KillSignal=SIGINT
 Restart=on-failure
