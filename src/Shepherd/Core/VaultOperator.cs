@@ -13,7 +13,9 @@ namespace Shepherd.Core
         private readonly VaultClientFactory _vaultClientFactory;
         private readonly string? _hostname;
 
-        public VaultOperator(ILogger<VaultOperator> logger, IKeyProvider keyProvider, VaultClientFactory vaultClientFactory,
+        public VaultOperator(ILogger<VaultOperator> logger,
+                             IKeyProvider keyProvider,
+                             VaultClientFactory vaultClientFactory,
                              ShepherdConfiguration configuration)
         {
             _logger = logger;
