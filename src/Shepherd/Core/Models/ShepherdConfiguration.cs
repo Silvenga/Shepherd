@@ -20,12 +20,28 @@ namespace Shepherd.Core.Models
 
     public class TransitUnsealingConfiguration
     {
-        public string? Token { get; set; }
+        public VaultAuthConfiguration Auth { get; set; } = new();
         public Uri? Address { get; set; }
         public string? KeyName { get; set; } = "autounseal";
         public string? MountPath { get; set; } = "transit";
         public string? Hostname { get; set; }
         public List<string> WrappedKeys { get; set; } = new();
+    }
+
+    public class VaultAuthConfiguration
+    {
+        public string? Provider { get; set; } = "AppRole";
+
+        public AppRoleVaultAuthConfiguration AppRole { get; set; } = new();
+    }
+
+    public class AppRoleVaultAuthConfiguration
+    {
+        public string? RoleId { get; set; }
+
+        public string? SecretId { get; set; }
+
+        public string? MountPath { get; set; } = "approle";
     }
 
     public class SimpleUnsealingConfiguration

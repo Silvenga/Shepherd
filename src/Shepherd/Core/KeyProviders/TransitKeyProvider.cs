@@ -16,24 +16,29 @@ namespace Shepherd.Core.KeyProviders
         private readonly ILogger<TransitKeyProvider> _logger;
         private readonly VaultClientFactory _vaultClientFactory;
 
-        private readonly IReadOnlyList<string> _wrappedKeys;
-        private readonly string _token;
-        private readonly string _mountPath;
-        private readonly string _keyName;
-        private readonly string? _hostname;
         private readonly Uri _address;
+        private readonly string _keyName;
+        private readonly string _mountPath;
+        private readonly IReadOnlyList<string> _wrappedKeys;
+        private readonly string? _hostname;
+
+        private readonly VaultAuthConfiguration _auth;
 
         public TransitKeyProvider(ILogger<TransitKeyProvider> logger, ShepherdConfiguration configuration, VaultClientFactory vaultClientFactory)
         {
             _logger = logger;
             _vaultClientFactory = vaultClientFactory;
 
-            _address = configuration.Unsealing.Transit.Address ?? throw new ArgumentException("Key 'Unsealing:Transit:Address' is invalid.");
-            _keyName = configuration.Unsealing.Transit.KeyName ?? throw new ArgumentException("Key 'Unsealing:Transit:KeyName' is invalid.");
-            _mountPath = configuration.Unsealing.Transit.MountPath ?? throw new ArgumentException("Key 'Unsealing:Transit:MountPath' is invalid.");
-            _token = configuration.Unsealing.Transit.Token ?? throw new ArgumentException("Key 'Unsealing:Transit:Token' is invalid.");
-            _wrappedKeys = configuration.Unsealing.Transit.WrappedKeys;
-            _hostname = configuration.Unsealing.Transit.Hostname;
+            var transit = configuration.Unsealing.Transit;
+
+            _address = transit.Address ?? throw new ArgumentException("Key 'Unsealing:Transit:Address' is invalid.");
+            _keyName = transit.KeyName ?? throw new ArgumentException("Key 'Unsealing:Transit:KeyName' is invalid.");
+            _mountPath = transit.MountPath ?? throw new ArgumentException("Key 'Unsealing:Transit:MountPath' is invalid.");
+            _wrappedKeys = transit.WrappedKeys;
+            _hostname = transit.Hostname;
+
+            _auth = transit.Auth;
+            vaultClientFactory.AssertValidConfiguration(transit.Auth);
 
             if (!_wrappedKeys.Any())
             {
@@ -43,7 +48,7 @@ namespace Shepherd.Core.KeyProviders
 
         public async IAsyncEnumerable<string> GatherKeys([EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var vaultClient = _vaultClientFactory.CreateClient(_address, _token, _hostname);
+            var vaultClient = _vaultClientFactory.CreateClient(_address, _auth, _hostname);
 
             var index = 0;
             foreach (var wrappedKey in _wrappedKeys)

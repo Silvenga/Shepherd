@@ -6,7 +6,10 @@ using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
+using Shepherd.Core.Models;
 using VaultSharp;
+using VaultSharp.V1.AuthMethods;
+using VaultSharp.V1.AuthMethods.AppRole;
 using VaultSharp.V1.AuthMethods.Token;
 
 namespace Shepherd.Core.Factories
@@ -20,18 +23,43 @@ namespace Shepherd.Core.Factories
             _logger = logger;
         }
 
-        public IVaultClient CreateClient(Uri address, string token, string? expectedHostname)
+        public void AssertValidConfiguration(VaultAuthConfiguration authConfiguration)
         {
-            var settings = new VaultClientSettings(address.ToString(), new TokenAuthMethodInfo(token))
+            CreateAuthMethod(authConfiguration);
+        }
+
+        public IVaultClient CreateClient(Uri address, VaultAuthConfiguration authConfiguration, string? expectedHostname)
+        {
+            return CreateCreate(address, CreateAuthMethod(authConfiguration), expectedHostname);
+        }
+
+        public IVaultClient CreateClient(Uri address, string? expectedHostname)
+        {
+            return CreateCreate(address, new TokenAuthMethodInfo(Guid.NewGuid().ToString()), expectedHostname);
+        }
+
+        private IVaultClient CreateCreate(Uri address, IAuthMethodInfo authMethodInfo, string? expectedHostname)
+        {
+            var settings = new VaultClientSettings(address.ToString(), authMethodInfo)
             {
                 MyHttpClientProviderFunc = CreateHttpClientHandler(expectedHostname)
             };
             return new VaultClient(settings);
         }
 
-        public IVaultClient CreateClient(Uri address, string? expectedHostname)
+        private IAuthMethodInfo CreateAuthMethod(VaultAuthConfiguration authConfiguration)
         {
-            return CreateClient(address, Guid.NewGuid().ToString(), expectedHostname);
+            var provider = authConfiguration.Provider?.ToLower() ?? throw new ArgumentException("Key 'Auth:Provider' is invalid.");
+            switch (provider)
+            {
+                case "approle":
+                    var roleId = authConfiguration.AppRole.RoleId ?? throw new ArgumentException("Key 'Auth:AppRole:RoleId' is invalid.");
+                    var secretId = authConfiguration.AppRole.SecretId ?? throw new ArgumentException("Key 'Auth:AppRole:SecretId' is invalid.");
+                    var mountPoint = authConfiguration.AppRole.MountPath ?? throw new ArgumentException("Key 'Auth:AppRole:MountPath' is invalid.");
+                    return new AppRoleAuthMethodInfo(mountPoint, roleId, secretId);
+                default:
+                    throw new ArgumentException($"Auth provider '{provider}' is invalid.");
+            }
         }
 
         private Func<HttpClientHandler, HttpClient> CreateHttpClientHandler(string? expectedHostname)
@@ -57,7 +85,7 @@ namespace Shepherd.Core.Factories
 
                 if (onlyHashNameValidationError && certificate != null)
                 {
-                    _logger.LogTrace("Certificate is trusted, but the hostname does not match, validating hostname.");
+                    _logger.LogTrace($"Certificate is trusted, but the hostname does not match, validating for certificate hostname '{expectedHostname}'.");
 
                     var sans = GetExtensions(certificate).Where(x => x.Oid?.Value == "2.5.29.17")
                                                          .Select(x => x.Format(true))
