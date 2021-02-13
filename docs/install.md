@@ -90,3 +90,9 @@ EOF
 # If needed, reload systemd.
 systemctl daemon-reload --system
 ```
+
+```bash
+# Enable and start the service.
+systemctl enable vault-shepherd.service
+systemctl start vault-shepherd.service
+```
