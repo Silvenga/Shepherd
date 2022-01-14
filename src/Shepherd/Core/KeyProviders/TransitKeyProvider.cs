@@ -67,8 +67,8 @@ namespace Shepherd.Core.KeyProviders
                     _logger.LogWarning($"Got warning '{warning}' from Vault during Transit decryption.");
                 }
 
-                byte[] bytes = Convert.FromBase64String(result.Data.Base64EncodedPlainText);
-                string decodedString = Encoding.UTF8.GetString(bytes);
+                var bytes = Convert.FromBase64String(result.Data.Base64EncodedPlainText);
+                var decodedString = Encoding.UTF8.GetString(bytes);
                 yield return decodedString;
             }
         }

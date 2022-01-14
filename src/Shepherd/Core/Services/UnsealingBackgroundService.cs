@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shepherd.Core.DiscoveryProviders;
+using Shepherd.Core.Models;
 
 namespace Shepherd.Core.Services
 {
@@ -28,19 +29,36 @@ namespace Shepherd.Core.Services
             {
                 try
                 {
-                    await foreach (var updates in _discoveryProvider.FetchUpdates(stoppingToken))
+                    await foreach (var update in _discoveryProvider.FetchUpdates(stoppingToken))
                     {
-                        var vault = updates.Vault;
-
-                        _logger.LogInformation($"Vault '{vault}' is sealed, attempting to unseal.");
-                        await _vaultOperator.ProvideKeys(vault);
+                        var success = false;
+                        for (var i = 1; !success && i <= 5; i++)
+                        {
+                            _logger.LogInformation($"Vault '{update.Vault}' is sealed, attempting to unseal (Attempt: {i}/5).");
+                            success = await TryUnseal(update.Vault);
+                            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                        }
                     }
                 }
-                catch (Exception e) when (e is not TaskCanceledException 
+                catch (Exception e) when (e is not TaskCanceledException
                                           && e is not OperationCanceledException)
                 {
                     _logger.LogWarning(e, "An exception occurred while responding to vault updates.");
                 }
+            }
+        }
+
+        private async Task<bool> TryUnseal(Vault vault)
+        {
+            try
+            {
+                await _vaultOperator.ProvideKeys(vault);
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "An exception occurred while responding to vault updates.");
+                return false;
             }
         }
     }
