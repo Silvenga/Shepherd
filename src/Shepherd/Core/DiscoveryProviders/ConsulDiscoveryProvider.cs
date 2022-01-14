@@ -50,7 +50,6 @@ namespace Shepherd.Core.DiscoveryProviders
             {
                 var queryOptions = new QueryOptions
                 {
-                    Consistency = ConsistencyMode.Consistent,
                     WaitIndex = index
                 };
 
@@ -64,21 +63,23 @@ namespace Shepherd.Core.DiscoveryProviders
                 var unsealedVaults = result.Response
                                            .Where(x => x.Checks.Any(c => c.CheckID.EndsWith(":vault-sealed-check") && c.Status.Equals(HealthStatus.Critical)))
                                            .ToList();
-                var hasUnsealedVaults = unsealedVaults.Any();
-                if (hasUnsealedVaults)
+
+                foreach (var service in unsealedVaults.Select(x => x.Service))
                 {
-                    foreach (var service in unsealedVaults.Select(x => x.Service))
-                    {
-                        var vault = new Vault(new UriBuilder("https", service.Address, service.Port).Uri);
+                    var vault = new Vault(new UriBuilder("https", service.Address, service.Port).Uri);
 
-                        _logger.LogInformation($"Vault '{vault}' has been detected as sealed.");
+                    _logger.LogInformation($"Vault '{vault}' has been detected as sealed.");
 
-                        var vaultEvent = new UnsealedVaultEvent(vault);
-                        await writer.WriteAsync(vaultEvent, cancellationToken);
-                    }
+                    var vaultEvent = new UnsealedVaultEvent(vault);
+                    await writer.WriteAsync(vaultEvent, cancellationToken);
                 }
 
-                index = result.LastIndex;
+                if (result.LastIndex > index
+                    && result.LastIndex > 0)
+                {
+                    index = result.LastIndex;
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
         }
